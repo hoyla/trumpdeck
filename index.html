@@ -333,7 +333,8 @@ function renderQuote(card, rec){
 }
 
 function rssCard(item){
-  const card = cardShell(item.link);
+  // Click through to the real Truth Social post; trumpstruth is only our backend.
+  const card = cardShell(item.originalUrl || item.link);
   const top = el('div','top');
   const who = el('div','who');
   who.append(el('div','nm','Donald J. Trump'));
