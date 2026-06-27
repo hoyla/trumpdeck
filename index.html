@@ -455,6 +455,9 @@ async function fetchRSS(cfg){
       summary: desc.replace(/<\/(p|br|div|li)>/gi,' ').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().slice(0,400),
       link, image,
       id: (link.match(/statuses\/(\d+)/) || [])[1],   // trumpstruth id, for media lookup
+      // the real Truth Social post — better fallback than trumpstruth, which is
+      // exactly where the media failed to load.
+      originalUrl: n.getElementsByTagName('truth:originalUrl')[0]?.textContent?.trim() || null,
       date: get('pubDate') || get('published') || get('updated')
     };
   });
@@ -507,7 +510,7 @@ async function enrichTruthMedia(items, body){
         TS_MEDIA.set(it.id, media);
       }catch(e){
         const slot = card()?.querySelector('.mediaslot');   // leave uncached → retry next refresh
-        if(slot) slot.innerHTML = '<a href="'+it.link+'" target="_blank" rel="noopener">🖼 open on Truth Social →</a>';
+        if(slot) slot.innerHTML = '<a href="'+(it.originalUrl||it.link)+'" target="_blank" rel="noopener">🖼 open on Truth Social →</a>';
         return;
       }
     }
@@ -517,7 +520,7 @@ async function enrichTruthMedia(items, body){
       const nodes = buildMediaNodes(media);
       if(slot) slot.replaceWith(nodes); else el0.append(nodes);
     }else if(slot){
-      slot.innerHTML = '<a href="'+it.link+'" target="_blank" rel="noopener">🖼 media / retruth — open on Truth Social →</a>';
+      slot.innerHTML = '<a href="'+(it.originalUrl||it.link)+'" target="_blank" rel="noopener">🖼 media / retruth — open on Truth Social →</a>';
     }
   });
 }
