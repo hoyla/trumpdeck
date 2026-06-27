@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Keep this out of search engines: it's a private feed reader, not a publication.
+     For a GitHub *project* page the meta tag is what's honoured (a subpath robots.txt
+     is ignored by crawlers), so this is the effective control. -->
+<meta name="robots" content="noindex, nofollow, noarchive, noimageindex">
+<title>TRUMPDECK</title>
+<style>
+  :root{
+    --bg:#0f1419; --col:#15202b; --col-head:#1b2836; --line:#2b3a4a;
+    --ink:#e7edf3; --muted:#8aa0b4; --link:#4ea1ff; --card-hover:#1c2a38;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  /* ---- top bar ---- */
+  header.app{
+    flex:0 0 auto; display:flex; align-items:center; gap:14px;
+    padding:10px 16px; background:#0b1016; border-bottom:1px solid var(--line);
+  }
+  header.app h1{
+    margin:0; font-size:18px; letter-spacing:2px; font-weight:800;
+  }
+  header.app h1 .a{color:#ff4b4b} header.app h1 .b{color:#4ea1ff}
+  header.app .spacer{flex:1}
+  header.app .meta{color:var(--muted); font-size:12px}
+  button.btn{
+    background:#1d2a38; color:var(--ink); border:1px solid var(--line);
+    border-radius:7px; padding:6px 11px; font-size:12px; cursor:pointer;
+  }
+  button.btn:hover{background:#26384a}
+  /* ---- deck ---- */
+  .deck{
+    flex:1 1 auto; display:flex; gap:0; overflow-x:auto; overflow-y:hidden;
+    scroll-snap-type:x proximity;
+  }
+  .column{
+    flex:0 0 360px; max-width:360px; height:100%;
+    display:flex; flex-direction:column;
+    border-right:1px solid var(--line); background:var(--col);
+    scroll-snap-align:start;
+  }
+  .col-head{
+    flex:0 0 auto; display:flex; align-items:center; gap:9px;
+    padding:10px 12px; background:var(--col-head);
+    border-bottom:1px solid var(--line); position:relative;
+  }
+  .col-head .accent{width:4px; align-self:stretch; border-radius:3px; background:var(--accent,#4ea1ff)}
+  .col-head .ti{flex:1; min-width:0}
+  .col-head .ti b{display:block; font-size:14px}
+  .col-head .ti small{color:var(--muted); font-size:11px}
+  .col-head .refresh{
+    background:none; border:none; color:var(--muted); cursor:pointer;
+    font-size:15px; padding:4px; line-height:1; border-radius:6px;
+  }
+  .col-head .refresh:hover{color:var(--ink); background:#26384a}
+  .col-head .refresh.spin{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .col-body{flex:1 1 auto; overflow-y:auto; overflow-x:hidden}
+  .col-body::-webkit-scrollbar{width:8px}
+  .col-body::-webkit-scrollbar-thumb{background:#2b3a4a; border-radius:4px}
+
+  /* ---- cards ---- */
+  .card{padding:11px 12px; border-bottom:1px solid var(--line); cursor:pointer}
+  .card:hover{background:var(--card-hover)}
+  .card .repost{color:var(--muted); font-size:11px; margin-bottom:5px}
+  .card .top{display:flex; gap:9px}
+  .card .avatar{width:40px; height:40px; border-radius:50%; flex:0 0 auto; background:#26384a; object-fit:cover}
+  .card .who{min-width:0; flex:1}
+  .card .who .nm{font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .card .who .hd{color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .card .who .hd .dot{margin:0 4px}
+  .card .body{margin-top:7px; white-space:pre-wrap; word-wrap:break-word; overflow-wrap:anywhere}
+  .card .body a{color:var(--link); text-decoration:none}
+  .card .media{margin-top:9px; border-radius:12px; overflow:hidden; border:1px solid var(--line)}
+  .card .media img{display:block; width:100%; max-height:380px; object-fit:cover}
+  .card .media video{display:block; width:100%; max-height:420px; background:#000}
+  .card .mediaslot .muted{color:var(--muted)}
+  .card .headline{margin-top:7px; font-weight:600; line-height:1.35}
+  .card .snippet{margin-top:5px; color:var(--muted); font-size:13px}
+  .card .video{position:relative}
+  .card .video .play{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.25); color:#fff; font-size:34px;
+  }
+  .card .ext{margin-top:9px; border:1px solid var(--line); border-radius:12px; overflow:hidden}
+  .card .ext img{width:100%; max-height:200px; object-fit:cover; display:block}
+  .card .ext .cap{padding:8px 10px}
+  .card .ext .cap b{display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .card .ext .cap small{color:var(--muted); display:block; margin-top:2px}
+  .card .quote{margin-top:9px; border:1px solid var(--line); border-radius:12px; padding:9px 10px}
+  .card .quote .qh{color:var(--muted); font-size:12px; margin-bottom:4px}
+  .card .quote .qb{font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere}
+
+  .state{padding:18px 14px; color:var(--muted); font-size:13px}
+  .state.err{color:#ff8b8b}
+  .state .retry{display:inline-block; margin-top:9px}
+  .skeleton{padding:11px 12px; border-bottom:1px solid var(--line)}
+  .skeleton .l{height:10px; background:#22323f; border-radius:5px; margin:7px 0}
+  .skeleton .l.s{width:55%} .skeleton .l.m{width:80%}
+</style>
+</head>
+<body>
+<header class="app">
+  <h1><span class="a">TRUMP</span><span class="b">DECK</span></h1>
+  <span class="meta" id="globalMeta">loading…</span>
+  <span class="spacer"></span>
+  <button class="btn" id="refreshAll">↻ Refresh all</button>
+</header>
+<div class="deck" id="deck"></div>
+
+<script>
+/* ============================================================================
+   TRUMPDECK — configuration
+   ----------------------------------------------------------------------------
+   Add / remove / reorder columns here. Built for up to ~6 columns.
+   Column types:
+     'rss'            — an RSS/Atom feed, fetched via a CORS-proxy fallback chain
+                          props: { url }
+     'bluesky-author' — one account's posts
+                          props: { actor }  (handle, e.g. 'atrupar.com')
+     'bluesky-search' — keyword firehose
+                          props: { q, sort }  sort: 'latest' | 'top'
+     'bluesky-list'   — a curated Bluesky list as a column
+                          props: { list }   (an at:// list URI — see template below)
+   ========================================================================== */
+const COLUMNS = [
+  {
+    id:'truth', title:'Truth Social', sub:'@realDonaldTrump', accent:'#ff4b4b',
+    type:'rss', url:'https://www.trumpstruth.org/feed'
+  },
+  {
+    id:'rupar', title:'Aaron Rupar', sub:'@atrupar · the clips', accent:'#4ea1ff',
+    type:'bluesky-author', actor:'atrupar.com'
+  },
+  {
+    // Merged feed across several verified accounts — reliable from any browser.
+    id:'firehose', title:'Trump firehose', sub:'Bluesky · curated accounts', accent:'#f5a623',
+    type:'bluesky-merge',
+    actors:['acyn.bsky.social','marisakabas.bsky.social','justinhendrix.bsky.social','propublica.org']
+  },
+  {
+    // Real journalism. 'news' = generic headline feed (any RSS). Reuters has no
+    // public RSS anymore (401), so this uses the Guardian's Trump topic feed.
+    id:'guardian', title:'The Guardian', sub:'Trump — real journalism', accent:'#1dd3a0',
+    type:'news', source:'The Guardian', url:'https://www.theguardian.com/us-news/donaldtrump/rss'
+  },
+
+  /* ---- More columns, ready to switch on. Uncomment & tweak: ----------------
+  {
+    // Keyword firehose. Works from a normal residential browser, but Bluesky's
+    // edge 403s `searchPosts` from many datacenter IPs, so it can come up empty
+    // on some networks/VPNs. The merged-accounts column above is the robust default.
+    id:'maga', title:'Keyword search', sub:'Bluesky · "Trump"', accent:'#9b59ff',
+    type:'bluesky-search', q:'Trump', sort:'latest'
+  },
+  {
+    id:'someone', title:'Another voice', sub:'@handle', accent:'#1dd3a0',
+    type:'bluesky-author', actor:'handle.bsky.social'
+  },
+  {
+    id:'list', title:'Politics list', sub:'curated', accent:'#ff7ab8',
+    type:'bluesky-list', list:'at://did:plc:xxxx/app.bsky.graph.list/yyyy'
+  },
+  --------------------------------------------------------------------------- */
+];
+
+const REFRESH_MS = 3 * 60 * 1000;   // auto-refresh every 3 minutes
+const POST_LIMIT = 30;
+
+/* ============================================================================
+   Plumbing — you shouldn't need to edit below here.
+   ========================================================================== */
+const BSKY = 'https://public.api.bsky.app/xrpc/';
+// CORS-proxy fallback chain. corsproxy.io is the most reliable from a browser
+// (it needs the Origin header browsers always send); allorigins is the backup.
+const CORS = u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`;
+const RSS_PROXIES = [
+  CORS,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,   // raw body
+  u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,   // {contents}
+];
+
+const $ = (s, r=document) => r.querySelector(s);
+const el = (tag, cls, txt) => { const e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e; };
+const esc = s => (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function timeAgo(iso){
+  const d = new Date(iso); if(isNaN(d)) return '';
+  const s = Math.floor((Date.now()-d)/1000);
+  if(s<60)  return s+'s';
+  if(s<3600) return Math.floor(s/60)+'m';
+  if(s<86400) return Math.floor(s/3600)+'h';
+  if(s<604800) return Math.floor(s/86400)+'d';
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+}
+
+/* linkify plain text (urls + @handles) into safe HTML */
+function linkify(text){
+  let h = esc(text);
+  h = h.replace(/(https?:\/\/[^\s<]+)/g, u => `<a href="${u}" target="_blank" rel="noopener">${u.replace(/^https?:\/\//,'')}</a>`);
+  return h;
+}
+
+/* ---------- column scaffolding ---------- */
+const cols = {};   // id -> {cfg, bodyEl, refreshBtn, updatedAt}
+
+function buildDeck(){
+  const deck = $('#deck');
+  COLUMNS.forEach(cfg => {
+    const c = el('div','column');
+    const head = el('div','col-head');
+    head.style.setProperty('--accent', cfg.accent || '#4ea1ff');
+    const accent = el('div','accent');
+    const ti = el('div','ti');
+    ti.append(el('b', null, cfg.title));
+    if(cfg.sub) ti.append(el('small', null, cfg.sub));
+    const rb = el('button','refresh','↻'); rb.title='Refresh column';
+    rb.onclick = () => load(cfg.id);
+    head.append(accent, ti, rb);
+    const body = el('div','col-body');
+    c.append(head, body);
+    deck.append(c);
+    cols[cfg.id] = { cfg, body, rb };
+  });
+}
+
+function skeletons(body){
+  body.innerHTML='';
+  for(let i=0;i<4;i++){
+    const s = el('div','skeleton');
+    s.append(el('div','l m'), el('div','l'), el('div','l s'));
+    body.append(s);
+  }
+}
+function showState(body, msg, isErr, retryId){
+  body.innerHTML='';
+  const d = el('div', 'state'+(isErr?' err':''), msg);
+  if(retryId){
+    const r = el('button','btn retry','Retry');
+    r.onclick = () => load(retryId);
+    d.append(document.createElement('br'), r);
+  }
+  body.append(d);
+}
+
+/* ---------- card builders ---------- */
+function cardShell(href){
+  const card = el('div','card');
+  if(href) card.onclick = e => { if(e.target.tagName!=='A') window.open(href,'_blank','noopener'); };
+  return card;
+}
+
+function blueskyCard(item){
+  const post = item.post; if(!post) return null;
+  const a = post.author || {};
+  const rkey = (post.uri||'').split('/').pop();
+  const href = `https://bsky.app/profile/${a.handle}/post/${rkey}`;
+  const card = cardShell(href);
+
+  if(item.reason && item.reason.$type === 'app.bsky.feed.defs#reasonRepost'){
+    const by = item.reason.by || {};
+    card.append(el('div','repost','🔁 reposted by '+(by.displayName||by.handle||'')));
+  }
+
+  const top = el('div','top');
+  const av = el('img','avatar'); av.src = a.avatar||''; av.alt=''; av.loading='lazy';
+  const who = el('div','who');
+  who.append(el('div','nm', a.displayName || a.handle || ''));
+  const hd = el('div','hd');
+  hd.innerHTML = `@${esc(a.handle||'')}<span class="dot">·</span>${timeAgo(post.indexedAt||post.record?.createdAt)}`;
+  who.append(hd);
+  top.append(av, who);
+  card.append(top);
+
+  const text = post.record?.text || '';
+  if(text){ const b=el('div','body'); b.innerHTML=linkify(text); card.append(b); }
+
+  renderEmbed(card, post.embed);
+  return card;
+}
+
+function renderEmbed(card, embed){
+  if(!embed) return;
+  const t = embed.$type || '';
+  // images
+  if(t.includes('embed.images') && embed.images?.length){
+    const m = el('div','media');
+    embed.images.slice(0,4).forEach(im => { const i=el('img'); i.src=im.thumb; i.alt=im.alt||''; i.loading='lazy'; m.append(i); });
+    card.append(m);
+  }
+  // video (HLS) — show poster + play glyph, click-through plays on bsky
+  else if(t.includes('embed.video') && embed.thumbnail){
+    const m = el('div','media video');
+    const i=el('img'); i.src=embed.thumbnail; i.loading='lazy'; m.append(i);
+    m.append(el('div','play','▶'));
+    card.append(m);
+  }
+  // external link card
+  else if(t.includes('embed.external') && embed.external){
+    const e = embed.external; const box=el('div','ext');
+    if(e.thumb){ const i=el('img'); i.src=e.thumb; i.loading='lazy'; box.append(i); }
+    const cap=el('div','cap'); cap.append(el('b',null,e.title||e.uri));
+    if(e.description) cap.append(el('small',null,e.description));
+    box.append(cap); card.append(box);
+  }
+  // record-with-media: render the media part, then the quote
+  else if(t.includes('recordWithMedia')){
+    renderEmbed(card, embed.media);
+    renderQuote(card, embed.record?.record);
+  }
+  // plain quote
+  else if(t.includes('embed.record')){
+    renderQuote(card, embed.record);
+  }
+}
+
+function renderQuote(card, rec){
+  if(!rec) return;
+  const a = rec.author || {};
+  const q = el('div','quote');
+  q.append(el('div','qh', (a.displayName||a.handle||'')+' @'+(a.handle||'')));
+  const txt = rec.value?.text || rec.record?.text || '';
+  if(txt) q.append(el('div','qb', txt.slice(0,280)));
+  card.append(q);
+}
+
+function rssCard(item){
+  const card = cardShell(item.link);
+  const top = el('div','top');
+  const who = el('div','who');
+  who.append(el('div','nm','Donald J. Trump'));
+  const hd = el('div','hd');
+  hd.innerHTML = `Truth Social<span class="dot">·</span>${timeAgo(item.date)}`;
+  who.append(hd); top.append(who); card.append(top);
+  if(item.id) card.dataset.sid = item.id;
+  // trumpstruth puts "[No Title] - Post from …" in the title for media/retruth
+  // posts; prefer real title text, else the stripped description.
+  const t = item.title || '';
+  const realTitle = t && t!=='(no title)' && !/^\[No Title\]/i.test(t);
+  const text = realTitle ? t : (item.summary || '');
+  if(text){ const b=el('div','body'); b.innerHTML=linkify(text); card.append(b); }
+  // Media is fetched & injected later by enrichTruthMedia(). For text-less
+  // posts (almost always media/retruths) show a slot it replaces in place.
+  if(!text){ const s=el('div','body mediaslot'); s.innerHTML='<span class="muted">🖼 loading media…</span>'; card.append(s); }
+  return card;
+}
+
+function newsCard(item, cfg){
+  const card = cardShell(item.link);
+  const top = el('div','top'); const who = el('div','who');
+  who.append(el('div','nm', cfg.source || cfg.title || 'News'));
+  who.append(el('div','hd', timeAgo(item.date)));
+  top.append(who); card.append(top);
+  card.append(el('div','headline', item.title));
+  if(item.summary) card.append(el('div','snippet', item.summary.slice(0,180)));
+  if(item.image){
+    const m=el('div','media'); const i=el('img'); i.src=item.image; i.loading='lazy';
+    i.onerror=()=>m.remove(); m.append(i); card.append(m);
+  }
+  return card;
+}
+
+/* ---------- fetchers ---------- */
+async function fetchBlueskyAuthor(cfg){
+  const r = await fetch(`${BSKY}app.bsky.feed.getAuthorFeed?actor=${encodeURIComponent(cfg.actor)}&limit=${POST_LIMIT}`);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return (await r.json()).feed || [];
+}
+async function fetchBlueskySearch(cfg){
+  const u = `${BSKY}app.bsky.feed.searchPosts?q=${encodeURIComponent(cfg.q)}&limit=${POST_LIMIT}&sort=${cfg.sort||'latest'}`;
+  // Try direct; some networks get IP-blocked by Bluesky's edge on search only,
+  // which surfaces as a CORS "Failed to fetch". Fall back through a CORS proxy.
+  let json;
+  try{
+    const r = await fetch(u);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    json = await r.json();
+  }catch(e){
+    const r = await fetch(CORS(u), {cache:'no-store'});
+    if(!r.ok) throw new Error('search unavailable (HTTP '+r.status+')');
+    json = await r.json();
+  }
+  return (json.posts || []).map(p => ({post:p}));
+}
+async function fetchBlueskyMerge(cfg){
+  const feeds = await Promise.allSettled(
+    cfg.actors.map(a => fetch(`${BSKY}app.bsky.feed.getAuthorFeed?actor=${encodeURIComponent(a)}&limit=20`)
+      .then(r => r.ok ? r.json() : {feed:[]}))
+  );
+  const seen = new Set(), items = [];
+  feeds.forEach(f => {
+    if(f.status!=='fulfilled') return;
+    (f.value.feed||[]).forEach(it => {
+      const k = it.post?.uri; if(!k || seen.has(k)) return;
+      seen.add(k); items.push(it);
+    });
+  });
+  items.sort((a,b) => new Date(b.post?.indexedAt||0) - new Date(a.post?.indexedAt||0));
+  return items.slice(0, POST_LIMIT);
+}
+async function fetchBlueskyList(cfg){
+  const r = await fetch(`${BSKY}app.bsky.feed.getListFeed?list=${encodeURIComponent(cfg.list)}&limit=${POST_LIMIT}`);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return (await r.json()).feed || [];
+}
+// Fetch a URL through the CORS-proxy fallback chain, returning the body text.
+// corsproxy.io is fastest but rejects null-origin (file://) requests; allorigins
+// tolerates them, so the chain keeps everything working off the filesystem too.
+async function proxiedText(url){
+  let lastErr=null;
+  for(const mk of RSS_PROXIES){
+    try{
+      const r = await fetch(mk(url), {cache:'no-store'});
+      if(!r.ok){ lastErr=new Error('proxy HTTP '+r.status); continue; }
+      const ct = r.headers.get('content-type')||'';
+      const raw = ct.includes('application/json') ? (await r.json()).contents : await r.text();
+      if(!raw || raw.includes('error code')){ lastErr=new Error('proxy error body'); continue; }
+      return raw;
+    }catch(e){ lastErr=e; }
+  }
+  throw lastErr || new Error('all proxies failed');
+}
+async function fetchRSS(cfg){
+  const xml = await proxiedText(cfg.url);
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  const nodes = [...doc.querySelectorAll('item, entry')];
+  return nodes.slice(0, POST_LIMIT).map(n => {
+    const get = sel => n.querySelector(sel)?.textContent?.trim() || '';
+    const link = n.querySelector('link')?.getAttribute('href') || get('link');
+    const desc = get('description') || get('content') || get('summary');
+    // image: first <img> in the description, else the largest media:content/enclosure
+    let image=null; const mm = desc.match(/<img[^>]+src="([^"]+)"/i); if(mm) image=mm[1];
+    if(!image){
+      let best=null, bestW=-1;
+      [...n.getElementsByTagName('media:content'), ...n.getElementsByTagName('enclosure')].forEach(e=>{
+        const u=e.getAttribute('url'); if(!u) return;
+        const ty=e.getAttribute('type')||''; if(ty && !ty.startsWith('image')) return;
+        const w=+(e.getAttribute('width')||0); if(w>bestW){ best=u; bestW=w; }
+      });
+      if(best) image=best;
+    }
+    const cleanTitle = get('title').replace(/\s+/g,' ');
+    return {
+      title: cleanTitle || '(no title)',
+      // strip tags WITHOUT inserting spaces — Mastodon splits URLs across
+      // <span> boundaries, so spaces here would fragment the link.
+      summary: desc.replace(/<\/(p|br|div|li)>/gi,' ').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim().slice(0,400),
+      link, image,
+      id: (link.match(/statuses\/(\d+)/) || [])[1],   // trumpstruth id, for media lookup
+      date: get('pubDate') || get('published') || get('updated')
+    };
+  });
+}
+
+/* ---- Truth Social media -----------------------------------------------------
+   The RSS carries no media, but trumpstruth re-hosts every attachment on its
+   own (Cloudflare-free) Linode storage. We scrape each status page once for
+   those mirror URLs and inject real <img>/<video>. Cached by id, so refreshes
+   only fetch newly-seen posts. ------------------------------------------------ */
+const TS_MEDIA = new Map();
+async function pool(arr, n, fn){
+  const q = arr.map((v,i)=>[v,i]);
+  const worker = async () => { while(q.length){ const [v,i]=q.shift(); try{ await fn(v,i); }catch(e){} } };
+  await Promise.all(Array.from({length:Math.max(1,Math.min(n,arr.length))}, worker));
+}
+function extractMedia(html){
+  const out=[], seen=new Set();
+  const re=/truth-archive\.us-iad-1\.linodeobjects\.com\/attachments\/\d+\/[A-Za-z0-9._-]+/g;
+  let m;
+  while((m=re.exec(html))){
+    const u='https://'+m[0]; if(seen.has(u)) continue; seen.add(u);
+    const ext=(u.split('.').pop()||'').toLowerCase();
+    out.push({type:['mp4','webm','mov','m4v'].includes(ext)?'video':'image', url:u});
+  }
+  return out.slice(0,4);
+}
+function buildMediaNodes(media){
+  const wrap=el('div','media');
+  media.forEach(mi=>{
+    if(mi.type==='video'){
+      const v=document.createElement('video');
+      v.src=mi.url; v.controls=true; v.preload='none'; v.playsInline=true;
+      v.onclick=e=>e.stopPropagation();
+      wrap.append(v);
+    }else{
+      const i=el('img'); i.src=mi.url; i.loading='lazy'; i.onerror=()=>i.remove(); wrap.append(i);
+    }
+  });
+  return wrap;
+}
+async function enrichTruthMedia(items, body){
+  await pool(items.slice(0,20), 5, async (it)=>{
+    if(!it.id) return;
+    const card = () => body.querySelector('.card[data-sid="'+it.id+'"]');
+    let media = TS_MEDIA.get(it.id);
+    if(media===undefined){
+      try{
+        media = extractMedia(await proxiedText('https://www.trumpstruth.org/statuses/'+it.id));
+        TS_MEDIA.set(it.id, media);
+      }catch(e){
+        const slot = card()?.querySelector('.mediaslot');   // leave uncached → retry next refresh
+        if(slot) slot.innerHTML = '<a href="'+it.link+'" target="_blank" rel="noopener">🖼 open on Truth Social →</a>';
+        return;
+      }
+    }
+    const el0 = card(); if(!el0 || el0.querySelector('.media')) return;
+    const slot = el0.querySelector('.mediaslot');
+    if(media.length){
+      const nodes = buildMediaNodes(media);
+      if(slot) slot.replaceWith(nodes); else el0.append(nodes);
+    }else if(slot){
+      slot.innerHTML = '<a href="'+it.link+'" target="_blank" rel="noopener">🖼 media / retruth — open on Truth Social →</a>';
+    }
+  });
+}
+
+/* ---------- orchestration ---------- */
+async function load(id){
+  const c = cols[id]; if(!c) return;
+  const {cfg, body, rb} = c;
+  rb.classList.add('spin');
+  if(!body.querySelector('.card')) skeletons(body);
+  try{
+    let items=[], rawRss=null;
+    if(cfg.type==='rss'){ rawRss = await fetchRSS(cfg); items = rawRss.map(rssCard); }
+    else if(cfg.type==='news')           items = (await fetchRSS(cfg)).map(it => newsCard(it, cfg));
+    else if(cfg.type==='bluesky-author') items = (await fetchBlueskyAuthor(cfg)).map(blueskyCard);
+    else if(cfg.type==='bluesky-search') items = (await fetchBlueskySearch(cfg)).map(blueskyCard);
+    else if(cfg.type==='bluesky-merge')  items = (await fetchBlueskyMerge(cfg)).map(blueskyCard);
+    else if(cfg.type==='bluesky-list')   items = (await fetchBlueskyList(cfg)).map(blueskyCard);
+    items = items.filter(Boolean);
+    if(!items.length){ showState(body,'No posts right now.',false,id); }
+    else {
+      body.innerHTML=''; items.forEach(n=>body.append(n));
+      if(rawRss) enrichTruthMedia(rawRss, body);   // progressively inject media
+    }
+    c.updatedAt = Date.now();
+  }catch(e){
+    showState(body, (cfg.title+': '+(e.message||'failed to load')), true, id);
+  }finally{
+    rb.classList.remove('spin');
+    updateGlobalMeta();
+  }
+}
+
+function loadAll(){ COLUMNS.forEach(c => load(c.id)); }
+
+function updateGlobalMeta(){
+  const times = Object.values(cols).map(c=>c.updatedAt).filter(Boolean);
+  const m = $('#globalMeta');
+  if(!times.length){ m.textContent='loading…'; return; }
+  m.textContent = `updated ${timeAgo(new Date(Math.max(...times)).toISOString())} ago · auto every ${REFRESH_MS/60000}m`;
+}
+
+buildDeck();
+loadAll();
+setInterval(loadAll, REFRESH_MS);
+setInterval(updateGlobalMeta, 30000);
+$('#refreshAll').onclick = loadAll;
+</script>
+</body>
+</html>
